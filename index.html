@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport"
+        content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
+  <title>PAPAN STEREK DIGITAL</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#ffffff">
+
+  <!-- iOS FULLSCREEN -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Aplikasi">
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    iframe {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100dvh;
+      border: none;
+    }
+  </style>
+
+  <script>
+    // Paksa hide address bar di Android
+    window.addEventListener("load", () => {
+      setTimeout(() => {
+        window.scrollTo(0, 1);
+      }, 0);
+    });
+  </script>
+</head>
+
+<body>
+  <iframe 
+    src="https://script.google.com/macros/s/AKfycbyyfIljChe6HNMUniBcXaRRnBODmcnLVILqGIATBVgDgrv12AQMfMz6hcfeISeFXnLsUQ/exec"
+    allowfullscreen>
+  </iframe>
+</body>
+</html>
