@@ -7,131 +7,379 @@
 
   <title>PAPAN STEREK DIGITAL</title>
 
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#ffffff">
+
+  <!-- iOS FULLSCREEN -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Aplikasi">
+
   <style>
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
-      font-family: Arial, sans-serif;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
 
     html, body {
       width: 100%;
       height: 100%;
-      background: #fff;
+      overflow: hidden;
+      background: linear-gradient(135deg, #1a2980, #26d0ce);
     }
 
-    /* LOGIN */
-    #login {
-      height: 100vh;
+    /* Layar Login */
+    #login-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #1a2980, #26d0ce);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      transition: opacity 0.3s ease;
+      padding: 20px;
+    }
+
+    .login-container {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 40px 30px;
+      border-radius: 20px;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+      text-align: center;
+      max-width: 400px;
+      width: 100%;
+      backdrop-filter: blur(10px);
+    }
+
+    .logo {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 20px;
+      background: linear-gradient(135deg, #1a2980, #26d0ce);
+      border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
+      color: white;
+      font-size: 24px;
+      font-weight: bold;
     }
 
-    .login-box {
-      width: 90%;
-      max-width: 300px;
-      padding: 20px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
+    h1 {
+      color: #1a2980;
+      margin-bottom: 10px;
+      font-size: 28px;
     }
 
-    .login-box h2 {
-      text-align: center;
-      margin-bottom: 15px;
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 14px;
     }
 
-    .login-box input,
-    .login-box button {
+    .password-container {
+      position: relative;
+      margin-bottom: 25px;
+    }
+
+    input[type="password"] {
       width: 100%;
-      padding: 10px;
+      padding: 15px 20px;
+      padding-right: 50px;
+      border: 2px solid #ddd;
+      border-radius: 10px;
+      font-size: 16px;
+      transition: all 0.3s;
+      outline: none;
+    }
+
+    input[type="password"]:focus {
+      border-color: #1a2980;
+      box-shadow: 0 0 0 3px rgba(26, 41, 128, 0.1);
+    }
+
+    .toggle-password {
+      position: absolute;
+      right: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: #666;
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #1a2980, #26d0ce);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .login-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(26, 41, 128, 0.3);
+    }
+
+    .login-btn:active {
+      transform: translateY(0);
+    }
+
+    .error-message {
+      color: #e74c3c;
+      margin-top: 15px;
+      font-size: 14px;
+      min-height: 20px;
+    }
+
+    /* Layar Konten */
+    #content-screen {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: none;
+    }
+
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    .logout-btn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(26, 41, 128, 0.9);
+      color: white;
+      border: none;
+      border-radius: 50px;
+      padding: 10px 20px;
+      font-size: 14px;
+      cursor: pointer;
+      z-index: 1001;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+      transition: all 0.3s;
+    }
+
+    .logout-btn:hover {
+      background: rgba(26, 41, 128, 1);
+      transform: scale(1.05);
+    }
+
+    /* Loading */
+    .loading {
+      display: none;
       margin-top: 10px;
     }
 
-    /* IFRAME */
-    iframe {
-      position: fixed;
-      inset: 0;
-      width: 100vw;
-      height: 100dvh;
-      border: none;
-      display: none;
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #1a2980;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Responsive */
+    @media (max-width: 480px) {
+      .login-container {
+        padding: 30px 20px;
+        margin: 20px;
+      }
+      
+      h1 {
+        font-size: 24px;
+      }
     }
   </style>
 </head>
 
 <body>
-
-<!-- LOGIN PAGE -->
-<div id="login">
-  <div class="login-box">
-    <h2>Login</h2>
-    <input type="text" id="user" placeholder="Username">
-    <input type="password" id="pass" placeholder="Password">
-    <button onclick="login()">Masuk</button>
+  <!-- Layar Login -->
+  <div id="login-screen">
+    <div class="login-container">
+      <div class="logo">PSD</div>
+      <h1>PAPAN STEREK DIGITAL</h1>
+      <p class="subtitle">Masukkan password untuk mengakses konten</p>
+      
+      <div class="password-container">
+        <input type="password" id="password" placeholder="Masukkan password" autocomplete="current-password">
+        <button type="button" class="toggle-password" id="toggle-password">👁️</button>
+      </div>
+      
+      <button class="login-btn" id="login-btn">MASUK</button>
+      
+      <div class="loading" id="loading">
+        <div class="spinner"></div>
+      </div>
+      
+      <div class="error-message" id="error-message"></div>
+    </div>
   </div>
-</div>
 
-<!-- HALAMAN UTAMA -->
-<iframe 
-  id="app"
-  src="https://script.google.com/macros/s/AKfycbyyfIljChe6HNMUniBcXaRRnBODmcnLVILqGIATBVgDgrv12AQMfMz6hcfeISeFXnLsUQ/exec"
-  allowfullscreen>
-</iframe>
+  <!-- Layar Konten -->
+  <div id="content-screen">
+    <button class="logout-btn" id="logout-btn">KELUAR</button>
+    <iframe 
+      src="https://script.google.com/macros/s/AKfycbyyfIljChe6HNMUniBcXaRRnBODmcnLVILqGIATBVgDgrv12AQMfMz6hcfeISeFXnLsUQ/exec"
+      allowfullscreen
+      id="main-frame">
+    </iframe>
+  </div>
 
-<script>
-  const USERNAME = "admin";
-  const PASSWORD = "12345";
+  <script>
+    // Password yang valid (ganti dengan password yang Anda inginkan)
+    const VALID_PASSWORD = "sterek123"; // GANTI PASSWORD INI
+    
+    // DOM Elements
+    const loginScreen = document.getElementById('login-screen');
+    const contentScreen = document.getElementById('content-screen');
+    const passwordInput = document.getElementById('password');
+    const loginBtn = document.getElementById('login-btn');
+    const togglePasswordBtn = document.getElementById('toggle-password');
+    const logoutBtn = document.getElementById('logout-btn');
+    const errorMessage = document.getElementById('error-message');
+    const loading = document.getElementById('loading');
+    const mainFrame = document.getElementById('main-frame');
 
-  const TIMEOUT = 20 * 60 * 1000; // 20 menit
-  let logoutTimer;
-
-  // Auto login jika sudah pernah login
-  if (localStorage.getItem("login") === "true") {
-    showApp();
-  }
-
-  function login() {
-    const u = document.getElementById("user").value;
-    const p = document.getElementById("pass").value;
-
-    if (u === USERNAME && p === PASSWORD) {
-      localStorage.setItem("login", "true");
-      resetTimer();
-      showApp();
-    } else {
-      alert("Username atau Password salah");
-    }
-  }
-
-  function showApp() {
-    document.getElementById("login").style.display = "none";
-    document.getElementById("app").style.display = "block";
-    resetTimer();
-  }
-
-  function logout() {
-    localStorage.removeItem("login");
-    location.reload();
-  }
-
-  // Reset timer inactivity
-  function resetTimer() {
-    clearTimeout(logoutTimer);
-    logoutTimer = setTimeout(() => {
-      alert("Session berakhir karena tidak ada aktivitas");
-      logout();
-    }, TIMEOUT);
-  }
-
-  // Deteksi aktivitas user
-  ["mousemove", "mousedown", "touchstart", "keydown", "scroll"]
-    .forEach(event => {
-      document.addEventListener(event, resetTimer, true);
+    // Cek apakah sudah login
+    document.addEventListener('DOMContentLoaded', () => {
+      const isLoggedIn = localStorage.getItem('isLoggedIn');
+      if (isLoggedIn === 'true') {
+        showContent();
+      }
+      
+      // Paksa hide address bar di Android
+      setTimeout(() => {
+        window.scrollTo(0, 1);
+      }, 0);
     });
-</script>
 
+    // Toggle show/hide password
+    togglePasswordBtn.addEventListener('click', () => {
+      const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+      passwordInput.setAttribute('type', type);
+      togglePasswordBtn.textContent = type === 'password' ? '👁️' : '🔒';
+    });
 
+    // Login dengan Enter key
+    passwordInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        loginBtn.click();
+      }
+    });
+
+    // Proses login
+    loginBtn.addEventListener('click', () => {
+      const password = passwordInput.value.trim();
+      
+      // Validasi input
+      if (!password) {
+        showError('Password tidak boleh kosong');
+        return;
+      }
+      
+      // Tampilkan loading
+      showLoading(true);
+      errorMessage.textContent = '';
+      
+      // Simulasi proses validasi (bisa diganti dengan AJAX call)
+      setTimeout(() => {
+        if (password === VALID_PASSWORD) {
+          // Login berhasil
+          localStorage.setItem('isLoggedIn', 'true');
+          showContent();
+          showLoading(false);
+        } else {
+          // Login gagal
+          showError('Password salah. Coba lagi.');
+          showLoading(false);
+          passwordInput.value = '';
+          passwordInput.focus();
+          
+          // Tambahkan efek shake untuk error
+          passwordInput.style.animation = 'none';
+          setTimeout(() => {
+            passwordInput.style.animation = 'shake 0.5s';
+          }, 10);
+        }
+      }, 800); // Delay untuk simulasi loading
+    });
+
+    // Logout
+    logoutBtn.addEventListener('click', () => {
+      if (confirm('Apakah Anda yakin ingin keluar?')) {
+        localStorage.removeItem('isLoggedIn');
+        showLogin();
+      }
+    });
+
+    // Fungsi untuk menampilkan konten
+    function showContent() {
+      loginScreen.style.display = 'none';
+      contentScreen.style.display = 'block';
+      
+      // Reload iframe untuk memastikan konten fresh
+      mainFrame.src = mainFrame.src;
+    }
+
+    // Fungsi untuk menampilkan login screen
+    function showLogin() {
+      contentScreen.style.display = 'none';
+      loginScreen.style.display = 'flex';
+      passwordInput.value = '';
+      errorMessage.textContent = '';
+      passwordInput.focus();
+    }
+
+    // Fungsi untuk menampilkan error
+    function showError(message) {
+      errorMessage.textContent = message;
+    }
+
+    // Fungsi untuk menampilkan/ menyembunyikan loading
+    function showLoading(show) {
+      loading.style.display = show ? 'block' : 'none';
+      loginBtn.disabled = show;
+    }
+
+    // Auto focus ke input password
+    passwordInput.focus();
+
+    // Tambahkan CSS untuk animasi shake
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+        20%, 40%, 60%, 80% { transform: translateX(5px); }
+      }
+    `;
+    document.head.appendChild(style);
+  </script>
 </body>
 </html>
