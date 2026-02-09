@@ -7,6 +7,9 @@
 
   <title>PAPAN STEREK DIGITAL</title>
 
+  <!-- SweetAlert2 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+  
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#ffffff">
@@ -305,12 +308,15 @@
     </iframe>
   </div>
 
+  <!-- SweetAlert2 JS -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
   <script>
-    // Password yang valid (ganti dengan password yang Anda inginkan)
+    // Password yang valid
     const VALID_PASSWORD = "sterek123"; // GANTI PASSWORD INI
     
-    // Auto-login timeout (10 menit dalam milidetik)
-    const AUTO_LOGIN_TIMEOUT = 10 * 60 * 1000; // 10 menit
+    // Auto-logout timeout (10 menit dalam milidetik)
+    const AUTO_LOGOUT_TIMEOUT = 10 * 60 * 1000; // 10 menit
     
     // DOM Elements
     const loginScreen = document.getElementById('login-screen');
@@ -325,18 +331,19 @@
     const timerDisplay = document.getElementById('timer-display');
     const timerContainer = document.querySelector('.timer-container');
     
-    // Variabel untuk auto-login
+    // Variabel untuk auto-logout
     let lastActivityTime = Date.now();
     let inactivityTimer;
     let countdownInterval;
-    let remainingTime = AUTO_LOGIN_TIMEOUT;
+    let remainingTime = AUTO_LOGOUT_TIMEOUT;
+    let isLoggedIn = false;
 
     // Inisialisasi
     document.addEventListener('DOMContentLoaded', () => {
-      const isLoggedIn = localStorage.getItem('isLoggedIn');
-      if (isLoggedIn === 'true') {
+      isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+      if (isLoggedIn) {
         showContent();
-        startAutoLoginTimer(); // Mulai timer saat konten ditampilkan
+        startAutoLogoutTimer();
       }
       
       // Paksa hide address bar di Android
@@ -352,73 +359,106 @@
     function setupActivityListeners() {
       const activityEvents = [
         'mousedown', 'mousemove', 'keydown', 'scroll', 
-        'touchstart', 'click', 'keypress', 'wheel'
+        'touchstart', 'click', 'keypress', 'wheel',
+        'input', 'change', 'focus', 'blur'
       ];
       
       activityEvents.forEach(event => {
-        document.addEventListener(event, resetAutoLoginTimer);
+        document.addEventListener(event, () => resetAutoLogoutTimer(), { passive: true });
       });
       
-      // Juga deteksi aktivitas dalam iframe
-      window.addEventListener('message', function(event) {
-        // Jika ada pesan dari iframe, reset timer
-        resetAutoLoginTimer();
-      });
+      // Deteksi aktivitas dalam iframe menggunakan MutationObserver
+      setupIframeActivityDetection();
       
-      // Coba tangkap event dari iframe (jika cross-origin diizinkan)
-      try {
-        mainFrame.addEventListener('load', function() {
-          try {
-            const iframeWindow = mainFrame.contentWindow;
-            activityEvents.forEach(event => {
-              iframeWindow.addEventListener(event, resetAutoLoginTimer);
-            });
-          } catch (e) {
-            // Cross-origin error, tidak bisa akses content iframe
-            console.log('Tidak bisa akses content iframe (cross-origin)');
-          }
-        });
-      } catch (e) {
-        console.log('Tidak bisa menambahkan event listener ke iframe');
-      }
+      // Deteksi perubahan visibility tab
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          resetAutoLogoutTimer();
+        }
+      });
     }
 
-    // Fungsi untuk memulai timer auto-login
-    function startAutoLoginTimer() {
-      // Hapus timer sebelumnya jika ada
+    // Setup deteksi aktivitas dalam iframe
+    function setupIframeActivityDetection() {
+      // Coba setup postMessage communication dengan iframe
+      window.addEventListener('message', function(event) {
+        if (event.data === 'userActivity') {
+          resetAutoLogoutTimer();
+        }
+      });
+      
+      // Juga coba attach event listeners ke iframe setelah load
+      mainFrame.addEventListener('load', function() {
+        try {
+          // Coba kirim script ke iframe untuk mendeteksi aktivitas
+          const script = `
+            <script>
+              const activityEvents = ['mousedown', 'mousemove', 'keydown', 'click', 'scroll', 'touchstart', 'input', 'change'];
+              activityEvents.forEach(event => {
+                document.addEventListener(event, () => {
+                  window.parent.postMessage('userActivity', '*');
+                }, { passive: true });
+              });
+            <\/script>
+          `;
+          
+          mainFrame.contentDocument.open();
+          mainFrame.contentDocument.write(script);
+          mainFrame.contentDocument.close();
+        } catch (e) {
+          // Cross-origin error, gunakan interval checking sebagai fallback
+          console.log('Menggunakan fallback untuk deteksi aktivitas iframe');
+          startIframeFallbackDetection();
+        }
+      });
+    }
+
+    // Fallback detection untuk iframe cross-origin
+    function startIframeFallbackDetection() {
+      let lastIframeSrc = mainFrame.src;
+      setInterval(() => {
+        if (mainFrame.src !== lastIframeSrc) {
+          lastIframeSrc = mainFrame.src;
+          resetAutoLogoutTimer();
+        }
+      }, 1000);
+    }
+
+    // Fungsi untuk memulai timer auto-logout
+    function startAutoLogoutTimer() {
+      if (!isLoggedIn) return;
+      
       clearTimeout(inactivityTimer);
       clearInterval(countdownInterval);
       
-      // Reset waktu
-      remainingTime = AUTO_LOGIN_TIMEOUT;
+      remainingTime = AUTO_LOGOUT_TIMEOUT;
       lastActivityTime = Date.now();
       updateTimerDisplay();
       
-      // Mulai countdown visual
       countdownInterval = setInterval(updateTimerDisplay, 1000);
       
-      // Set timeout untuk auto-login
       inactivityTimer = setTimeout(() => {
-        performAutoLogin();
-      }, AUTO_LOGIN_TIMEOUT);
+        showAutoLogoutWarning();
+      }, AUTO_LOGOUT_TIMEOUT);
     }
 
     // Fungsi untuk reset timer saat ada aktivitas
-    function resetAutoLoginTimer() {
+    function resetAutoLogoutTimer() {
+      if (!isLoggedIn) return;
+      
       lastActivityTime = Date.now();
-      remainingTime = AUTO_LOGIN_TIMEOUT;
+      remainingTime = AUTO_LOGOUT_TIMEOUT;
       updateTimerDisplay();
       
-      // Restart timer
       clearTimeout(inactivityTimer);
       inactivityTimer = setTimeout(() => {
-        performAutoLogin();
-      }, AUTO_LOGIN_TIMEOUT);
+        showAutoLogoutWarning();
+      }, AUTO_LOGOUT_TIMEOUT);
     }
 
     // Fungsi untuk update tampilan timer
     function updateTimerDisplay() {
-      if (!timerDisplay) return;
+      if (!timerDisplay || !isLoggedIn) return;
       
       remainingTime -= 1000;
       
@@ -434,89 +474,122 @@
       timerDisplay.textContent = 
         `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
       
-      // Ubah warna saat waktu hampir habis
-      if (remainingTime <= 60000) { // Kurang dari 1 menit
+      if (remainingTime <= 60000) {
         timerDisplay.classList.add('timer-warning');
       } else {
         timerDisplay.classList.remove('timer-warning');
       }
     }
 
-    // Fungsi untuk melakukan auto-login
-    function performAutoLogin() {
+    // Fungsi untuk menampilkan peringatan auto-logout
+    function showAutoLogoutWarning() {
+      if (!isLoggedIn) return;
+      
+      Swal.fire({
+        title: '⏰ Sesi Akan Berakhir',
+        html: `
+          <div style="text-align: center;">
+            <p style="font-size: 16px; margin-bottom: 20px;">
+              Tidak ada aktivitas selama 10 menit. Sesi akan berakhir dalam:
+            </p>
+            <div style="font-size: 32px; font-weight: bold; color: #e74c3c; margin: 20px 0;">
+              00:30
+            </div>
+            <p style="font-size: 14px; color: #666;">
+              Klik "Lanjutkan" untuk tetap masuk
+            </p>
+          </div>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Lanjutkan',
+        cancelButtonText: 'Keluar',
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        reverseButtons: true,
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        timer: 30000, // 30 detik untuk merespons
+        timerProgressBar: true,
+        didOpen: () => {
+          // Countdown dalam modal
+          let warningTime = 30;
+          const countdownEl = Swal.getHtmlContainer().querySelector('div[style*="font-size: 32px"]');
+          
+          const warningInterval = setInterval(() => {
+            warningTime--;
+            countdownEl.textContent = `00:${warningTime.toString().padStart(2, '0')}`;
+            
+            if (warningTime <= 10) {
+              countdownEl.style.color = '#ff6b6b';
+            }
+            
+            if (warningTime <= 0) {
+              clearInterval(warningInterval);
+              performAutoLogout();
+            }
+          }, 1000);
+          
+          // Simpan interval untuk cleanup
+          Swal.getPopup().setAttribute('data-interval', warningInterval);
+        },
+        willClose: () => {
+          const interval = Swal.getPopup().getAttribute('data-interval');
+          if (interval) clearInterval(interval);
+        }
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // User ingin lanjut
+          resetAutoLogoutTimer();
+          showToast('Sesi diperpanjang');
+        } else if (result.dismiss === Swal.DismissReason.timer || 
+                   result.dismiss === Swal.DismissReason.cancel) {
+          // Timeout atau user memilih keluar
+          performAutoLogout();
+        }
+      });
+    }
+
+    // Fungsi untuk melakukan auto-logout
+    function performAutoLogout() {
       // Hentikan semua timer
       clearTimeout(inactivityTimer);
       clearInterval(countdownInterval);
       
-      // Tampilkan notifikasi
-      const notification = document.createElement('div');
-      notification.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: rgba(0, 0, 0, 0.85);
-        color: white;
-        padding: 20px 30px;
-        border-radius: 15px;
-        z-index: 10000;
-        text-align: center;
-        font-size: 16px;
-        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
-      `;
-      notification.innerHTML = `
-        <div style="margin-bottom: 10px; font-size: 24px;">⏰</div>
-        <div>Mengautentikasi ulang...</div>
-        <div style="font-size: 12px; opacity: 0.8; margin-top: 5px;">
-          Auto-login setelah 10 menit tidak aktif
-        </div>
-      `;
-      document.body.appendChild(notification);
-      
-      // Simulasi proses auto-login
-      setTimeout(() => {
-        // Refresh iframe dengan cache busting
-        mainFrame.src = mainFrame.src + '?t=' + new Date().getTime();
-        
-        // Hapus notifikasi
-        notification.remove();
-        
-        // Restart timer setelah auto-login
-        startAutoLoginTimer();
-        
-        // Reset timer display
-        timerDisplay.textContent = '10:00';
-        timerDisplay.classList.remove('timer-warning');
-        
-        // Tampilkan notifikasi sukses
-        showToast('Auto-login berhasil!');
-      }, 1500);
+      // Tampilkan notifikasi logout
+      Swal.fire({
+        title: 'Sesi Berakhir',
+        text: 'Anda telah keluar otomatis karena tidak ada aktivitas',
+        icon: 'info',
+        timer: 2000,
+        showConfirmButton: false,
+        allowOutsideClick: false
+      }).then(() => {
+        // Logout
+        isLoggedIn = false;
+        localStorage.removeItem('isLoggedIn');
+        showLogin();
+      });
     }
 
     // Fungsi untuk menampilkan toast notifikasi
     function showToast(message) {
-      const toast = document.createElement('div');
-      toast.style.cssText = `
-        position: fixed;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(26, 41, 128, 0.95);
-        color: white;
-        padding: 12px 25px;
-        border-radius: 25px;
-        z-index: 10000;
-        text-align: center;
-        font-size: 14px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-        animation: fadeInUp 0.3s, fadeOut 0.3s 2.7s;
-      `;
-      toast.textContent = message;
-      document.body.appendChild(toast);
+      const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+        didOpen: (toast) => {
+          toast.addEventListener('mouseenter', Swal.stopTimer);
+          toast.addEventListener('mouseleave', Swal.resumeTimer);
+        }
+      });
       
-      setTimeout(() => {
-        toast.remove();
-      }, 3000);
+      Toast.fire({
+        icon: 'success',
+        title: message
+      });
     }
 
     // Toggle show/hide password
@@ -537,24 +610,30 @@
     loginBtn.addEventListener('click', () => {
       const password = passwordInput.value.trim();
       
-      // Validasi input
       if (!password) {
         showError('Password tidak boleh kosong');
         return;
       }
       
-      // Tampilkan loading
       showLoading(true);
       errorMessage.textContent = '';
       
-      // Simulasi proses validasi
       setTimeout(() => {
         if (password === VALID_PASSWORD) {
           // Login berhasil
+          isLoggedIn = true;
           localStorage.setItem('isLoggedIn', 'true');
           showContent();
-          startAutoLoginTimer(); // Mulai timer auto-login
+          startAutoLogoutTimer();
           showLoading(false);
+          
+          // Tampilkan notifikasi sukses
+          Swal.fire({
+            title: 'Login Berhasil!',
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false
+          });
         } else {
           // Login gagal
           showError('Password salah. Coba lagi.');
@@ -562,7 +641,6 @@
           passwordInput.value = '';
           passwordInput.focus();
           
-          // Tambahkan efek shake untuk error
           passwordInput.style.animation = 'none';
           setTimeout(() => {
             passwordInput.style.animation = 'shake 0.5s';
@@ -571,17 +649,38 @@
       }, 800);
     });
 
-    // Logout
+    // Logout manual
     logoutBtn.addEventListener('click', () => {
-      if (confirm('Apakah Anda yakin ingin keluar?')) {
-        // Hentikan semua timer
-        clearTimeout(inactivityTimer);
-        clearInterval(countdownInterval);
-        
-        // Logout
-        localStorage.removeItem('isLoggedIn');
-        showLogin();
-      }
+      Swal.fire({
+        title: 'Konfirmasi Logout',
+        text: 'Apakah Anda yakin ingin keluar?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Keluar',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        reverseButtons: true
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // Hentikan semua timer
+          clearTimeout(inactivityTimer);
+          clearInterval(countdownInterval);
+          
+          // Logout
+          isLoggedIn = false;
+          localStorage.removeItem('isLoggedIn');
+          showLogin();
+          
+          // Tampilkan notifikasi
+          Swal.fire({
+            title: 'Berhasil Logout',
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false
+          });
+        }
+      });
     });
 
     // Fungsi untuk menampilkan konten
@@ -589,11 +688,9 @@
       loginScreen.style.display = 'none';
       contentScreen.style.display = 'block';
       
-      // Reset timer display
       timerDisplay.textContent = '10:00';
       timerDisplay.classList.remove('timer-warning');
       
-      // Reload iframe untuk memastikan konten fresh
       mainFrame.src = mainFrame.src + '?t=' + new Date().getTime();
     }
 
@@ -627,24 +724,6 @@
         0%, 100% { transform: translateX(0); }
         10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
         20%, 40%, 60%, 80% { transform: translateX(5px); }
-      }
-      @keyframes fadeInUp {
-        from {
-          opacity: 0;
-          transform: translateX(-50%) translateY(20px);
-        }
-        to {
-          opacity: 1;
-          transform: translateX(-50%) translateY(0);
-        }
-      }
-      @keyframes fadeOut {
-        from {
-          opacity: 1;
-        }
-        to {
-          opacity: 0;
-        }
       }
     `;
     document.head.appendChild(style);
