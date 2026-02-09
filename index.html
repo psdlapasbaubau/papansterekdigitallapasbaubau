@@ -63,17 +63,22 @@
     }
 
     .logo {
-      width: 80px;
-      height: 80px;
+      width: 100px;
+      height: 100px;
       margin: 0 auto 20px;
-      background: linear-gradient(135deg, #1a2980, #26d0ce);
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: white;
-      font-size: 24px;
-      font-weight: bold;
+      overflow: hidden;
+      border: 3px solid #1a2980;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .logo-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
     }
 
     h1 {
@@ -251,6 +256,11 @@
         margin: 20px;
       }
       
+      .logo {
+        width: 80px;
+        height: 80px;
+      }
+      
       h1 {
         font-size: 24px;
       }
@@ -266,6 +276,19 @@
         font-size: 13px;
       }
     }
+
+    /* Fallback untuk logo jika gambar gagal load */
+    .logo-fallback {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #1a2980, #26d0ce);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: bold;
+    }
   </style>
 </head>
 
@@ -273,9 +296,15 @@
   <!-- Layar Login -->
   <div id="login-screen">
     <div class="login-container">
-      <div class="logo">PSD</div>
+      <div class="logo">
+        <img src="https://raw.githubusercontent.com/drivelapas-del/lapasbaubau/refs/heads/main/LOG-QR%20PUTIH.png" 
+             alt="Logo Papan Sterek Digital" 
+             class="logo-img"
+             onerror="this.onerror=null; this.style.display='none'; document.querySelector('.logo-fallback').style.display='flex';">
+        <div class="logo-fallback" style="display: none;">PSD</div>
+      </div>
       <h1>PAPAN STEREK DIGITAL</h1>
-      <p class="subtitle">Masukkan password untuk mengakses konten</p>
+      <p class="subtitle">Lembaga Pemasyarakatan Kelas IIA Baubau</p>
       
       <div class="password-container">
         <input type="password" id="password" placeholder="Masukkan password" autocomplete="current-password">
@@ -330,6 +359,7 @@
     const mainFrame = document.getElementById('main-frame');
     const timerDisplay = document.getElementById('timer-display');
     const timerContainer = document.querySelector('.timer-container');
+    const logoImg = document.querySelector('.logo-img');
     
     // Variabel untuk auto-logout
     let lastActivityTime = Date.now();
@@ -337,6 +367,15 @@
     let countdownInterval;
     let remainingTime = AUTO_LOGOUT_TIMEOUT;
     let isLoggedIn = false;
+
+    // Preload logo untuk menghindari flash saat loading
+    logoImg.onload = function() {
+      console.log('Logo berhasil dimuat');
+    };
+    
+    logoImg.onerror = function() {
+      console.log('Gagal memuat logo, menggunakan fallback');
+    };
 
     // Inisialisasi
     document.addEventListener('DOMContentLoaded', () => {
