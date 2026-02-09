@@ -204,6 +204,43 @@
       100% { transform: rotate(360deg); }
     }
 
+    /* Timer Display */
+    .timer-container {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 8px 15px;
+      border-radius: 20px;
+      font-size: 14px;
+      z-index: 1002;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    .timer-icon {
+      font-size: 12px;
+    }
+
+    #timer-display {
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      font-size: 15px;
+    }
+
+    .timer-warning {
+      color: #ff6b6b !important;
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
     /* Responsive */
     @media (max-width: 480px) {
       .login-container {
@@ -213,6 +250,17 @@
       
       h1 {
         font-size: 24px;
+      }
+      
+      .timer-container {
+        top: 15px;
+        left: 15px;
+        padding: 6px 12px;
+        font-size: 12px;
+      }
+      
+      #timer-display {
+        font-size: 13px;
       }
     }
   </style>
@@ -243,6 +291,12 @@
 
   <!-- Layar Konten -->
   <div id="content-screen">
+    <!-- Timer Display -->
+    <div class="timer-container">
+      <span class="timer-icon">⏰</span>
+      <span id="timer-display">10:00</span>
+    </div>
+    
     <button class="logout-btn" id="logout-btn">KELUAR</button>
     <iframe 
       src="https://script.google.com/macros/s/AKfycbyyfIljChe6HNMUniBcXaRRnBODmcnLVILqGIATBVgDgrv12AQMfMz6hcfeISeFXnLsUQ/exec"
@@ -255,6 +309,9 @@
     // Password yang valid (ganti dengan password yang Anda inginkan)
     const VALID_PASSWORD = "sterek123"; // GANTI PASSWORD INI
     
+    // Auto-login timeout (10 menit dalam milidetik)
+    const AUTO_LOGIN_TIMEOUT = 10 * 60 * 1000; // 10 menit
+    
     // DOM Elements
     const loginScreen = document.getElementById('login-screen');
     const contentScreen = document.getElementById('content-screen');
@@ -265,19 +322,202 @@
     const errorMessage = document.getElementById('error-message');
     const loading = document.getElementById('loading');
     const mainFrame = document.getElementById('main-frame');
+    const timerDisplay = document.getElementById('timer-display');
+    const timerContainer = document.querySelector('.timer-container');
+    
+    // Variabel untuk auto-login
+    let lastActivityTime = Date.now();
+    let inactivityTimer;
+    let countdownInterval;
+    let remainingTime = AUTO_LOGIN_TIMEOUT;
 
-    // Cek apakah sudah login
+    // Inisialisasi
     document.addEventListener('DOMContentLoaded', () => {
       const isLoggedIn = localStorage.getItem('isLoggedIn');
       if (isLoggedIn === 'true') {
         showContent();
+        startAutoLoginTimer(); // Mulai timer saat konten ditampilkan
       }
       
       // Paksa hide address bar di Android
       setTimeout(() => {
         window.scrollTo(0, 1);
       }, 0);
+      
+      // Setup event listeners untuk aktivitas
+      setupActivityListeners();
     });
+
+    // Setup event listeners untuk mendeteksi aktivitas
+    function setupActivityListeners() {
+      const activityEvents = [
+        'mousedown', 'mousemove', 'keydown', 'scroll', 
+        'touchstart', 'click', 'keypress', 'wheel'
+      ];
+      
+      activityEvents.forEach(event => {
+        document.addEventListener(event, resetAutoLoginTimer);
+      });
+      
+      // Juga deteksi aktivitas dalam iframe
+      window.addEventListener('message', function(event) {
+        // Jika ada pesan dari iframe, reset timer
+        resetAutoLoginTimer();
+      });
+      
+      // Coba tangkap event dari iframe (jika cross-origin diizinkan)
+      try {
+        mainFrame.addEventListener('load', function() {
+          try {
+            const iframeWindow = mainFrame.contentWindow;
+            activityEvents.forEach(event => {
+              iframeWindow.addEventListener(event, resetAutoLoginTimer);
+            });
+          } catch (e) {
+            // Cross-origin error, tidak bisa akses content iframe
+            console.log('Tidak bisa akses content iframe (cross-origin)');
+          }
+        });
+      } catch (e) {
+        console.log('Tidak bisa menambahkan event listener ke iframe');
+      }
+    }
+
+    // Fungsi untuk memulai timer auto-login
+    function startAutoLoginTimer() {
+      // Hapus timer sebelumnya jika ada
+      clearTimeout(inactivityTimer);
+      clearInterval(countdownInterval);
+      
+      // Reset waktu
+      remainingTime = AUTO_LOGIN_TIMEOUT;
+      lastActivityTime = Date.now();
+      updateTimerDisplay();
+      
+      // Mulai countdown visual
+      countdownInterval = setInterval(updateTimerDisplay, 1000);
+      
+      // Set timeout untuk auto-login
+      inactivityTimer = setTimeout(() => {
+        performAutoLogin();
+      }, AUTO_LOGIN_TIMEOUT);
+    }
+
+    // Fungsi untuk reset timer saat ada aktivitas
+    function resetAutoLoginTimer() {
+      lastActivityTime = Date.now();
+      remainingTime = AUTO_LOGIN_TIMEOUT;
+      updateTimerDisplay();
+      
+      // Restart timer
+      clearTimeout(inactivityTimer);
+      inactivityTimer = setTimeout(() => {
+        performAutoLogin();
+      }, AUTO_LOGIN_TIMEOUT);
+    }
+
+    // Fungsi untuk update tampilan timer
+    function updateTimerDisplay() {
+      if (!timerDisplay) return;
+      
+      remainingTime -= 1000;
+      
+      if (remainingTime <= 0) {
+        timerDisplay.textContent = '00:00';
+        timerDisplay.classList.add('timer-warning');
+        return;
+      }
+      
+      const minutes = Math.floor(remainingTime / 60000);
+      const seconds = Math.floor((remainingTime % 60000) / 1000);
+      
+      timerDisplay.textContent = 
+        `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      
+      // Ubah warna saat waktu hampir habis
+      if (remainingTime <= 60000) { // Kurang dari 1 menit
+        timerDisplay.classList.add('timer-warning');
+      } else {
+        timerDisplay.classList.remove('timer-warning');
+      }
+    }
+
+    // Fungsi untuk melakukan auto-login
+    function performAutoLogin() {
+      // Hentikan semua timer
+      clearTimeout(inactivityTimer);
+      clearInterval(countdownInterval);
+      
+      // Tampilkan notifikasi
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.85);
+        color: white;
+        padding: 20px 30px;
+        border-radius: 15px;
+        z-index: 10000;
+        text-align: center;
+        font-size: 16px;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+      `;
+      notification.innerHTML = `
+        <div style="margin-bottom: 10px; font-size: 24px;">⏰</div>
+        <div>Mengautentikasi ulang...</div>
+        <div style="font-size: 12px; opacity: 0.8; margin-top: 5px;">
+          Auto-login setelah 10 menit tidak aktif
+        </div>
+      `;
+      document.body.appendChild(notification);
+      
+      // Simulasi proses auto-login
+      setTimeout(() => {
+        // Refresh iframe dengan cache busting
+        mainFrame.src = mainFrame.src + '?t=' + new Date().getTime();
+        
+        // Hapus notifikasi
+        notification.remove();
+        
+        // Restart timer setelah auto-login
+        startAutoLoginTimer();
+        
+        // Reset timer display
+        timerDisplay.textContent = '10:00';
+        timerDisplay.classList.remove('timer-warning');
+        
+        // Tampilkan notifikasi sukses
+        showToast('Auto-login berhasil!');
+      }, 1500);
+    }
+
+    // Fungsi untuk menampilkan toast notifikasi
+    function showToast(message) {
+      const toast = document.createElement('div');
+      toast.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(26, 41, 128, 0.95);
+        color: white;
+        padding: 12px 25px;
+        border-radius: 25px;
+        z-index: 10000;
+        text-align: center;
+        font-size: 14px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        animation: fadeInUp 0.3s, fadeOut 0.3s 2.7s;
+      `;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    }
 
     // Toggle show/hide password
     togglePasswordBtn.addEventListener('click', () => {
@@ -307,12 +547,13 @@
       showLoading(true);
       errorMessage.textContent = '';
       
-      // Simulasi proses validasi (bisa diganti dengan AJAX call)
+      // Simulasi proses validasi
       setTimeout(() => {
         if (password === VALID_PASSWORD) {
           // Login berhasil
           localStorage.setItem('isLoggedIn', 'true');
           showContent();
+          startAutoLoginTimer(); // Mulai timer auto-login
           showLoading(false);
         } else {
           // Login gagal
@@ -327,12 +568,17 @@
             passwordInput.style.animation = 'shake 0.5s';
           }, 10);
         }
-      }, 800); // Delay untuk simulasi loading
+      }, 800);
     });
 
     // Logout
     logoutBtn.addEventListener('click', () => {
       if (confirm('Apakah Anda yakin ingin keluar?')) {
+        // Hentikan semua timer
+        clearTimeout(inactivityTimer);
+        clearInterval(countdownInterval);
+        
+        // Logout
         localStorage.removeItem('isLoggedIn');
         showLogin();
       }
@@ -343,8 +589,12 @@
       loginScreen.style.display = 'none';
       contentScreen.style.display = 'block';
       
+      // Reset timer display
+      timerDisplay.textContent = '10:00';
+      timerDisplay.classList.remove('timer-warning');
+      
       // Reload iframe untuk memastikan konten fresh
-      mainFrame.src = mainFrame.src;
+      mainFrame.src = mainFrame.src + '?t=' + new Date().getTime();
     }
 
     // Fungsi untuk menampilkan login screen
@@ -370,13 +620,31 @@
     // Auto focus ke input password
     passwordInput.focus();
 
-    // Tambahkan CSS untuk animasi shake
+    // Tambahkan CSS untuk animasi
     const style = document.createElement('style');
     style.textContent = `
       @keyframes shake {
         0%, 100% { transform: translateX(0); }
         10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
         20%, 40%, 60%, 80% { transform: translateX(5px); }
+      }
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateX(-50%) translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(-50%) translateY(0);
+        }
+      }
+      @keyframes fadeOut {
+        from {
+          opacity: 1;
+        }
+        to {
+          opacity: 0;
+        }
       }
     `;
     document.head.appendChild(style);
