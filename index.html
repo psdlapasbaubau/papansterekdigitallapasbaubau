@@ -84,7 +84,10 @@
   const USERNAME = "admin";
   const PASSWORD = "12345";
 
-  // Auto login jika sudah pernah
+  const TIMEOUT = 20 * 60 * 1000; // 20 menit
+  let logoutTimer;
+
+  // Auto login jika sudah pernah login
   if (localStorage.getItem("login") === "true") {
     showApp();
   }
@@ -95,6 +98,7 @@
 
     if (u === USERNAME && p === PASSWORD) {
       localStorage.setItem("login", "true");
+      resetTimer();
       showApp();
     } else {
       alert("Username atau Password salah");
@@ -104,8 +108,30 @@
   function showApp() {
     document.getElementById("login").style.display = "none";
     document.getElementById("app").style.display = "block";
+    resetTimer();
   }
+
+  function logout() {
+    localStorage.removeItem("login");
+    location.reload();
+  }
+
+  // Reset timer inactivity
+  function resetTimer() {
+    clearTimeout(logoutTimer);
+    logoutTimer = setTimeout(() => {
+      alert("Session berakhir karena tidak ada aktivitas");
+      logout();
+    }, TIMEOUT);
+  }
+
+  // Deteksi aktivitas user
+  ["mousemove", "mousedown", "touchstart", "keydown", "scroll"]
+    .forEach(event => {
+      document.addEventListener(event, resetTimer, true);
+    });
 </script>
+
 
 </body>
 </html>
