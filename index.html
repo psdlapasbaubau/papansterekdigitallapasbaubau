@@ -7,52 +7,105 @@
 
   <title>PAPAN STEREK DIGITAL</title>
 
-  <!-- PWA -->
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#ffffff">
-
-  <!-- iOS FULLSCREEN -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Aplikasi">
-
   <style>
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
+      font-family: Arial, sans-serif;
     }
 
     html, body {
       width: 100%;
       height: 100%;
-      overflow: hidden;
       background: #fff;
     }
 
+    /* LOGIN */
+    #login {
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .login-box {
+      width: 90%;
+      max-width: 300px;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+    }
+
+    .login-box h2 {
+      text-align: center;
+      margin-bottom: 15px;
+    }
+
+    .login-box input,
+    .login-box button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+    }
+
+    /* IFRAME */
     iframe {
       position: fixed;
       inset: 0;
       width: 100vw;
       height: 100dvh;
       border: none;
+      display: none;
     }
   </style>
-
-  <script>
-    // Paksa hide address bar di Android
-    window.addEventListener("load", () => {
-      setTimeout(() => {
-        window.scrollTo(0, 1);
-      }, 0);
-    });
-  </script>
 </head>
 
 <body>
-  <iframe 
-    src="https://script.google.com/macros/s/AKfycbyyfIljChe6HNMUniBcXaRRnBODmcnLVILqGIATBVgDgrv12AQMfMz6hcfeISeFXnLsUQ/exec"
-    allowfullscreen>
-  </iframe>
+
+<!-- LOGIN PAGE -->
+<div id="login">
+  <div class="login-box">
+    <h2>Login</h2>
+    <input type="text" id="user" placeholder="Username">
+    <input type="password" id="pass" placeholder="Password">
+    <button onclick="login()">Masuk</button>
+  </div>
+</div>
+
+<!-- HALAMAN UTAMA -->
+<iframe 
+  id="app"
+  src="https://script.google.com/macros/s/AKfycbyyfIljChe6HNMUniBcXaRRnBODmcnLVILqGIATBVgDgrv12AQMfMz6hcfeISeFXnLsUQ/exec"
+  allowfullscreen>
+</iframe>
+
+<script>
+  const USERNAME = "admin";
+  const PASSWORD = "12345";
+
+  // Auto login jika sudah pernah
+  if (localStorage.getItem("login") === "true") {
+    showApp();
+  }
+
+  function login() {
+    const u = document.getElementById("user").value;
+    const p = document.getElementById("pass").value;
+
+    if (u === USERNAME && p === PASSWORD) {
+      localStorage.setItem("login", "true");
+      showApp();
+    } else {
+      alert("Username atau Password salah");
+    }
+  }
+
+  function showApp() {
+    document.getElementById("login").style.display = "none";
+    document.getElementById("app").style.display = "block";
+  }
+</script>
+
 </body>
 </html>
