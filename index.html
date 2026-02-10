@@ -207,53 +207,34 @@
       font-size: 16px;
     }
 
-    /* Loading */
-    .loading {
-      display: none;
-      margin-top: 10px;
-    }
-
-    .spinner {
-      width: 20px;
-      height: 20px;
-      border: 3px solid #f3f3f3;
-      border-top: 3px solid #1a2980;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: 0 auto;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    /* Timer Display - dipindah ke kanan atas */
+    /* TIMER DISPLAY DI POJOK KIRI BAWAH */
     .timer-container {
       position: fixed;
-      top: 20px;
-      right: 20px;
+      bottom: 20px;
+      left: 20px;
       background: rgba(0, 0, 0, 0.7);
       color: white;
-      padding: 8px 15px;
+      padding: 10px 18px;
       border-radius: 20px;
       font-size: 14px;
       z-index: 1002;
       display: flex;
       align-items: center;
-      gap: 8px;
-      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+      gap: 10px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
       backdrop-filter: blur(5px);
+      min-width: 100px;
     }
 
     .timer-icon {
-      font-size: 12px;
+      font-size: 16px;
     }
 
     #timer-display {
       font-family: 'Courier New', monospace;
       font-weight: bold;
-      font-size: 15px;
+      font-size: 16px;
+      letter-spacing: 1px;
     }
 
     .timer-warning {
@@ -282,18 +263,24 @@
         font-size: 24px;
       }
       
+      /* Timer di mobile */
       .timer-container {
-        top: 15px;
-        right: 15px;
-        padding: 6px 12px;
-        font-size: 12px;
+        bottom: 15px;
+        left: 15px;
+        padding: 8px 15px;
+        font-size: 13px;
+        min-width: 90px;
       }
       
       #timer-display {
-        font-size: 13px;
+        font-size: 14px;
       }
       
-      /* Tombol logout lebih kecil di mobile */
+      .timer-icon {
+        font-size: 14px;
+      }
+      
+      /* Tombol logout di mobile */
       .logout-btn {
         bottom: 15px;
         right: 15px;
@@ -308,13 +295,47 @@
     
     /* Untuk layar sangat kecil (di bawah 360px) */
     @media (max-width: 360px) {
+      .timer-container {
+        bottom: 10px;
+        left: 10px;
+        padding: 6px 12px;
+        font-size: 12px;
+        min-width: 80px;
+        gap: 6px;
+      }
+      
+      #timer-display {
+        font-size: 12px;
+      }
+      
+      .timer-icon {
+        font-size: 12px;
+      }
+      
       .logout-btn {
+        bottom: 10px;
+        right: 10px;
         padding: 8px 15px;
         font-size: 12px;
       }
       
       .logout-icon {
         font-size: 12px;
+      }
+    }
+    
+    /* Untuk landscape mode */
+    @media (orientation: landscape) and (max-height: 500px) {
+      .timer-container {
+        bottom: 10px;
+        left: 10px;
+        padding: 6px 12px;
+      }
+      
+      .logout-btn {
+        bottom: 10px;
+        right: 10px;
+        padding: 8px 15px;
       }
     }
 
@@ -364,7 +385,7 @@
 
   <!-- Layar Konten -->
   <div id="content-screen">
-    <!-- Timer Display di kanan atas -->
+    <!-- Timer Display di pojok kiri bawah -->
     <div class="timer-container">
       <span class="timer-icon">⏰</span>
       <span id="timer-display">10:00</span>
@@ -551,6 +572,7 @@
       if (remainingTime <= 0) {
         timerDisplay.textContent = '00:00';
         timerDisplay.classList.add('timer-warning');
+        timerContainer.style.background = 'rgba(231, 76, 60, 0.9)';
         return;
       }
       
@@ -562,8 +584,13 @@
       
       if (remainingTime <= 60000) {
         timerDisplay.classList.add('timer-warning');
+        timerContainer.style.background = 'rgba(231, 76, 60, 0.8)';
+      } else if (remainingTime <= 180000) {
+        timerDisplay.classList.remove('timer-warning');
+        timerContainer.style.background = 'rgba(243, 156, 18, 0.8)';
       } else {
         timerDisplay.classList.remove('timer-warning');
+        timerContainer.style.background = 'rgba(0, 0, 0, 0.7)';
       }
     }
 
@@ -776,6 +803,7 @@
       
       timerDisplay.textContent = '10:00';
       timerDisplay.classList.remove('timer-warning');
+      timerContainer.style.background = 'rgba(0, 0, 0, 0.7)';
       
       mainFrame.src = mainFrame.src + '?t=' + new Date().getTime();
     }
